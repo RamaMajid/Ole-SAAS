@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\OrganizationController;
+use App\Http\Controllers\Api\AccountController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -36,6 +37,25 @@ Route::prefix('v1')->group(function () {
                     'message' => 'Connected to Tenant Context',
                     'active_organization' => $organization->name,
                 ]);
+            });
+
+            // ==========================================
+            // TENANT-AWARE ROUTES (Rute Spesifik Bisnis)
+            // ==========================================
+            Route::middleware('tenant')->group(function () {
+                
+                // Rute uji coba TenantMiddleware
+                Route::get('/tenant/status', function () {
+                    $organization = app('tenant');
+                    return response()->json([
+                        'message' => 'Connected to Tenant Context',
+                        'active_organization' => $organization->name,
+                    ]);
+                });
+
+                // Endpoint Finansial: Accounts (Otomatis terisolasi per tenant)
+                Route::apiResource('accounts', AccountController::class)->only(['index', 'store']);
+
             });
 
         });
