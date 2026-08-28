@@ -8,7 +8,18 @@ const axios = Axios.create({
         'Content-Type': 'application/json',
     },
     withCredentials: true,
-    withXSRFToken: true, // Kunci utama untuk Sanctum CSRF protection
+    withXSRFToken: true,
+});
+
+// Interceptor untuk menyisipkan header Tenant secara otomatis
+axios.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+        const tenantId = localStorage.getItem('active_organization_id');
+        if (tenantId) {
+            config.headers['X-Organization-ID'] = tenantId;
+        }
+    }
+    return config;
 });
 
 export default axios;
