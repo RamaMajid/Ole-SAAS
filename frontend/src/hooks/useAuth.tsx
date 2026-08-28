@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from '@/lib/axios';
+import { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 
 interface User {
@@ -10,10 +11,17 @@ interface User {
     email: string;
 }
 
+// Tambahkan interface ini untuk menggantikan 'any'
+interface LoginCredentials {
+    email?: string;
+    password?: string;
+    [key: string]: string | undefined;
+}
+
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    login: (data: any) => Promise<void>;
+    login: (data: LoginCredentials) => Promise<void>;
     logout: () => Promise<void>;
     errors: Record<string, string[]> | null;
     setErrors: (errors: Record<string, string[]> | null) => void;
@@ -29,32 +37,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const csrf = () => axios.get('/sanctum/csrf-cookie');
 
-    const fetchUser = async () => {
-        try {
-            const response = await axios.get('/api/v1/auth/me');
-            setUser(response.data.user);
-        } catch (error: any) {
-            if (error.response?.status === 401) {
-                setUser(null);
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     useEffect(() => {
+        // Pindahkan fetchUser ke dalam useEffect untuk menghindari peringatan cascading renders
+        const fetchUser = async () => {
+            try {
+                const response = await axios.get('/api/v1/auth/me');
+                setUser(response.data.user);
+            } catch (error: unknown) { // Gunakan unknown, bukan any
+                if (error instanceof AxiosError && error.response?.status === 401) {
+                    setUser(null);
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
         fetchUser();
     }, []);
 
-    const login = async (data: any) => {
+    const login = async (data: LoginCredentials) => {
         setErrors(null);
         try {
-            await csrf(); // Wajib ambil CSRF sebelum POST
+            await csrf();
             const response = await axios.post('/api/v1/auth/login', data);
             setUser(response.data.user);
             router.push('/dashboard');
-        } catch (error: any) {
-            if (error.response?.status === 422) {
+        } catch (error: unknown) {
+            if (error instanceof AxiosError && error.response?.status === 422) {
                 setErrors(error.response.data.errors);
             }
             throw error;

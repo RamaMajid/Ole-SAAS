@@ -19,16 +19,16 @@ export default function LoginPage() {
     }
 
     const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        try {
-            await login({ email, password });
-        } catch (error) {
-            // Error sudah ditangani di hook (setErrors)
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+            e.preventDefault();
+            setIsSubmitting(true);
+            try {
+                await login({ email, password });
+            } catch { // <-- Hapus (error) di sini
+                // Error sudah ditangani di hook (setErrors)
+            } finally {
+                setIsSubmitting(false);
+            }
+        };
 
     if (isLoading) return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
 
