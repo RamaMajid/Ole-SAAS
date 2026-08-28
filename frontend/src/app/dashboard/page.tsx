@@ -24,7 +24,7 @@ export default function DashboardPage() {
         try {
             await createOrganization(newOrgName);
             setNewOrgName('');
-        } catch (error) {
+        } catch { // Hapus deklarasi parameter (error) karena tidak digunakan
             alert('Failed to create organization. Check console for details.');
         } finally {
             setIsCreating(false);
@@ -35,8 +35,12 @@ export default function DashboardPage() {
         try {
             const res = await axios.get('/api/v1/tenant/status');
             setTestResult(JSON.stringify(res.data, null, 2));
-        } catch (error: any) {
-            setTestResult(JSON.stringify(error.response?.data || 'Connection Error', null, 2));
+        } catch (error: unknown) { // Ganti 'any' dengan 'unknown'
+            if (axios.isAxiosError(error)) {
+                setTestResult(JSON.stringify(error.response?.data || 'Connection Error', null, 2));
+            } else {
+                setTestResult('Unknown Error Occurred');
+            }
         }
     };
 
@@ -76,7 +80,8 @@ export default function DashboardPage() {
                                     </select>
                                 </div>
                             ) : (
-                                <p className="text-sm text-gray-500 italic">You don't belong to any workspace yet.</p>
+                                // Escape tanda kutip tunggal di JSX
+                                <p className="text-sm text-gray-500 italic">You don&apos;t belong to any workspace yet.</p>
                             )}
                         </div>
                         {activeOrganization && (

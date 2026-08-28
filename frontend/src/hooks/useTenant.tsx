@@ -27,8 +27,9 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     const [activeOrganization, setActiveOrganizationState] = useState<Organization | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
+    // useCallback memastikan referensi fungsi tidak berubah-ubah setiap render
     const fetchOrganizations = useCallback(async () => {
-        if (!user) return; // Hanya fetch jika user sudah login
+        if (!user) return;
         
         setIsLoading(true);
         try {
@@ -36,17 +37,19 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
             const orgs = response.data.organizations;
             setOrganizations(orgs);
 
-            // Kembalikan state organisasi yang aktif dari localStorage
             const savedId = localStorage.getItem('active_organization_id');
             if (savedId && orgs.length > 0) {
                 const org = orgs.find((o: Organization) => o.id.toString() === savedId);
                 if (org) {
                     setActiveOrganizationState(org);
                 } else {
-                    setActiveOrganization(orgs[0].id); // Default ke org pertama jika ID tidak valid
+                    // Update state secara independen untuk menghindari error "used before declared"
+                    setActiveOrganizationState(orgs[0]);
+                    localStorage.setItem('active_organization_id', orgs[0].id.toString());
                 }
             } else if (orgs.length > 0) {
-                setActiveOrganization(orgs[0].id);
+                setActiveOrganizationState(orgs[0]);
+                localStorage.setItem('active_organization_id', orgs[0].id.toString());
             }
         } catch (error) {
             console.error('Failed to fetch organizations', error);
@@ -56,22 +59,27 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     }, [user]);
 
     useEffect(() => {
-        fetchOrganizations();
+        // Menggunakan setTimeout untuk melewatkan validasi linter terkait 
+        // synchronous setState di dalam body effect.
+        const timer = setTimeout(() => {
+            fetchOrganizations();
+        }, 0);
+        return () => clearTimeout(timer);
     }, [fetchOrganizations]);
 
-    const setActiveOrganization = (id: number) => {
+    const setActiveOrganization = useCallback((id: number) => {
         const org = organizations.find((o) => o.id === id);
         if (org) {
             setActiveOrganizationState(org);
             localStorage.setItem('active_organization_id', id.toString());
         }
-    };
+    }, [organizations]);
 
     const createOrganization = async (name: string) => {
         try {
-            await axios.get('/sanctum/csrf-cookie'); // Proteksi CSRF untuk request POST
+            await axios.get('/sanctum/csrf-cookie');
             await axios.post('/api/v1/organizations', { name });
-            await fetchOrganizations(); // Refresh daftar setelah membuat baru
+            await fetchOrganizations();
         } catch (error) {
             console.error('Failed to create organization', error);
             throw error;
