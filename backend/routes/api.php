@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\OrganizationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -19,7 +20,24 @@ Route::prefix('v1')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
         });
 
-        // Nanti route organizations, customers, dll akan masuk ke sini
-    });
+        // Endpoint Manajemen Organisasi (Tidak butuh header X-Organization-ID)
+        Route::apiResource('organizations', OrganizationController::class)->only(['index', 'store', 'show']);
 
+        // ==========================================
+        // TENANT-AWARE ROUTES (Rute Spesifik Bisnis)
+        // ==========================================
+        Route::middleware('tenant')->group(function () {
+            
+            // Rute uji coba TenantMiddleware
+            Route::get('/tenant/status', function () {
+                // Jika lolos ke sini, berarti header valid dan user adalah anggota
+                $organization = app('tenant');
+                return response()->json([
+                    'message' => 'Connected to Tenant Context',
+                    'active_organization' => $organization->name,
+                ]);
+            });
+
+        });
+    });
 });
